@@ -1,0 +1,10 @@
+deflate.c: In function 'deflateParams':
+deflate.c:602:28: warning: macro expands to multiple statements [-Wmultistatement-macros]
+                 CLEAR_HASH(s);
+                            ^
+deflate.c:193:5: note: in definition of macro 'CLEAR_HASH'
+     s->head[s->hash_size-1] = NIL;
+     ^
+deflate.c:601:13: note: some parts of macro expansion are not guarded by this 'else' clause
+             else
+             ^~~~

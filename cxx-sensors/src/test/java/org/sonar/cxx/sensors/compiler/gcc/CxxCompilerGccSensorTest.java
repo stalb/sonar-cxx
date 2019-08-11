@@ -97,5 +97,25 @@ public class CxxCompilerGccSensorTest {
     // warning with activation switch should be mapped to the matching rule
     assertThat(issuesList.get(1).ruleKey().rule()).isEqualTo("-Wunused-variable");
   }
+
+  @Test
+  public void shouldReportFlow() {
+    SensorContextTester context = SensorContextTester.create(fs.baseDir());
+
+    settings.setProperty(language.getPluginProperty(CxxCompilerGccSensor.REPORT_PATH_KEY), "compiler-reports/build-warning-with-note.gcclog");
+    context.setSettings(settings);
+
+    context.fileSystem().add(TestInputFileBuilder.create("ProjectKey", "deflate.c")
+      .setLanguage("c").initMetadata("asd\nasdas\nasda\n").build());
+
+    CxxCompilerSensor sensor = new CxxCompilerGccSensor(language);
+    sensor.execute(context);
+
+    SoftAssertions softly = new SoftAssertions();
+    softly.assertThat(context.allIssues()).hasSize(1); // one issue
+    softly.assertThat(context.allIssues().iterator().next().flows()).hasSize(1); // with one flow
+    softly.assertThat(context.allIssues().iterator().next().flows().get(0).locations()).hasSize(2); // with 2 items
+    softly.assertAll();
+  }
   
 }
