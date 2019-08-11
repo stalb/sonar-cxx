@@ -114,7 +114,7 @@ public abstract class CxxCompilerSensor extends CxxIssuesReportSensor {
    * @return true, if valid
    */
   protected boolean isInputValid(String filename, String line, String id, String msg) {
-    return !filename.isEmpty() || !line.isEmpty() || !id.isEmpty() || !msg.isEmpty();
+	    return !filename.isEmpty() && !line.isEmpty() && !id.isEmpty() && !msg.isEmpty();
   }
 
   /**
