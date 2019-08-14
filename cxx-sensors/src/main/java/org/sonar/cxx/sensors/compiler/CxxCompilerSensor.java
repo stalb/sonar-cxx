@@ -58,23 +58,37 @@ public abstract class CxxCompilerSensor extends CxxIssuesReportSensor {
       Pattern pattern = Pattern.compile(reportRegEx);
       LOG.info("Using pattern : '{}'", pattern);
 
+      CxxReportIssue issue = null;
       while (scanner.hasNextLine()) {
         Matcher matcher = pattern.matcher(scanner.nextLine());
         if (matcher.find()) {
           String filename = alignFilename(matcher.group("file"));
           String line = alignLine(matcher.group("line"));
           String id = alignId(matcher.group("id"));
+          String severity = "warning";
+          try {
+        	  severity = alignSeverity(matcher.group("severity"));
+          } catch(IllegalArgumentException e) {
+        	  LOG.error("Scanner-matches Exception: {} - missing \"severity\" group in regex '{}'", e, reportRegEx);
+          }
           String msg = alignMessage(matcher.group("message"));
-          if (isInputValid(filename, line, id, msg)) {
+          if (isInputValid(filename, line, id, msg, severity)) {
             if (LOG.isDebugEnabled()) {
               LOG.debug("Scanner-matches file='{}' line='{}' id='{}' msg={}", filename, line, id, msg);
             }
-            CxxReportIssue issue = new CxxReportIssue(id, filename, line, msg);
-            saveUniqueViolation(context, issue);
+            if (issue != null) {
+                saveUniqueViolation(context, issue);
+            }
+            issue = new CxxReportIssue(id, filename, line, msg);
+          } else if ((issue != null) && isInputValidNote(filename, line, id, msg, severity)) {
+        	  issue.addFlowElement(filename, line, msg);
           } else {
-            LOG.warn("Invalid compiler warning: '{}''{}'", id, msg);
+            LOG.warn("Invalid compiler message: '{}''{}'", id, msg);
           }
         }
+      }
+      if (issue != null) {
+          saveUniqueViolation(context, issue);
       }
     } catch (java.io.FileNotFoundException | java.lang.IllegalArgumentException | java.lang.IllegalStateException e) {
       LOG.error("processReport Exception: {} - not processed '{}'", report, e);
@@ -111,10 +125,25 @@ public abstract class CxxCompilerSensor extends CxxIssuesReportSensor {
    * @param line
    * @param id
    * @param msg
+   * @param severity
    * @return true, if valid
    */
-  protected boolean isInputValid(String filename, String line, String id, String msg) {
-	    return !filename.isEmpty() && !line.isEmpty() && !id.isEmpty() && !msg.isEmpty();
+  protected boolean isInputValid(String filename, String line, String id, String msg, String severity) {
+    return !filename.isEmpty() && !line.isEmpty() && !id.isEmpty() && !msg.isEmpty() && ("warning".equals(severity) || "error".equals(severity));
+  }
+
+  /**
+   * Derived classes can overload this method
+   *
+   * @param filename
+   * @param line
+   * @param id
+   * @param msg
+   * @param severity
+   * @return true, if valid
+   */
+  protected boolean isInputValidNote(String filename, String line, String id, String msg, String severity) {
+    return !filename.isEmpty() && !line.isEmpty() && !msg.isEmpty() && "note".equals(severity);
   }
 
   /**
@@ -156,5 +185,14 @@ public abstract class CxxCompilerSensor extends CxxIssuesReportSensor {
   protected String alignMessage(String message) {
     return message;
   }
-
+  
+  /**
+   * Derived classes can overload this method to align severity
+   *
+   * @param severity
+   * @return
+   */
+  protected String alignSeverity(String severity) {
+    return severity;
+  }
 }
